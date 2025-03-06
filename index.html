@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Ticket System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #43c6ac 0%, #191654 100%);
+            min-height: 100vh;
+        }
+        .ticket-card {
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .ticket-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .modal-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+        }
+        .status-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <div class="min-h-screen pb-8">
+        <nav class="bg-white bg-opacity-90 backdrop-filter backdrop-blur-lg shadow-lg p-4 mb-8">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="bi bi-shield-check text-emerald-600"></i> TrafficGuard
+                </h1>
+                <div class="space-x-4 flex items-center">
+                    <span class="text-gray-600"><i class="bi bi-clock"></i> Today: <span id="currentDate"></span></span>
+                    <button id="newTicketBtn" class="bg-emerald-600 text-white px-6 py-2 rounded-full font-medium hover:bg-emerald-700 transition-all flex items-center">
+                        <i class="bi bi-plus-circle mr-2"></i> Issue Ticket
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="ticketContainer">
+                <!-- Tickets will be dynamically added here -->
+            </div>
+
+            <!-- Modal -->
+            <div id="ticketModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="modal-content rounded-2xl p-8 w-full max-w-md">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Issue New Violation Ticket</h2>
+                        <button id="cancelBtn" class="text-gray-500 hover:text-gray-700">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form id="ticketForm" class="space-y-6">
+                        <div>
+                            <label class="block mb-2 font-medium">Vehicle Number</label>
+                            <input type="text" id="vehicleNumber" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" placeholder="Enter vehicle number" required>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-medium">Vehicle Type</label>
+                            <select id="vehicleType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" required>
+                                <option value="Car">Car</option>
+                                <option value="Motorcycle">Motorcycle</option>
+                                <option value="Truck">Truck</option>
+                                <option value="Bus">Bus</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-medium">Violation Type</label>
+                            <select id="violationType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" required>
+                                <option value="Speeding">Speeding</option>
+                                <option value="Parking">Illegal Parking</option>
+                                <option value="Signal">Red Light Violation</option>
+                                <option value="Documentation">Missing Documentation</option>
+                                <option value="Seatbelt">No Seatbelt</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 font-medium">Fine Amount ($)</label>
+                            <input type="number" id="fineAmount" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" required>
+                        </div>
+                        <div class="flex justify-end space-x-4 mt-8">
+                            <button type="button" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" onclick="hideModal()">Cancel</button>
+                            <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Issue Ticket</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        const ticketModal = document.getElementById('ticketModal');
+        const newTicketBtn = document.getElementById('newTicketBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const ticketForm = document.getElementById('ticketForm');
+        const ticketContainer = document.getElementById('ticketContainer');
+
+        let tickets = JSON.parse(localStorage.getItem('tickets')) || [];
+
+        function showModal() {
+            ticketModal.classList.remove('hidden');
+        }
+
+        function hideModal() {
+            ticketModal.classList.add('hidden');
+            ticketForm.reset();
+        }
+
+        function getViolationColor(type) {
+            const colors = {
+                'Speeding': 'red',
+                'Parking': 'yellow',
+                'Signal': 'red',
+                'Documentation': 'blue',
+                'Seatbelt': 'orange'
+            };
+            return colors[type] || 'gray';
+        }
+
+        function createTicket(ticket) {
+            const ticketEl = document.createElement('div');
+            ticketEl.className = 'ticket-card relative rounded-xl p-6 shadow-lg';
+            
+            const violationColor = getViolationColor(ticket.violationType);
+            
+            ticketEl.innerHTML = `
+                <div class="status-badge bg-${violationColor}-100 text-${violationColor}-800 px-3 py-1 rounded-full text-sm font-medium">
+                    Pending
+                </div>
+                <div class="flex justify-between items-start mt-4">
+                    <div>
+                        <h3 class="text-xl font-bold">${ticket.vehicleNumber}</h3>
+                        <p class="text-gray-600 flex items-center mt-1">
+                            <i class="bi bi-car-front mr-2"></i> ${ticket.vehicleType}
+                        </p>
+                    </div>
+                    <span class="bg-red-100 text-red-800 px-4 py-2 rounded-full text-lg font-bold">$${ticket.fineAmount}</span>
+                </div>
+                <div class="mt-6 space-y-2">
+                    <p class="text-gray-700 flex items-center">
+                        <i class="bi bi-exclamation-triangle-fill text-${violationColor}-500 mr-2"></i>
+                        ${ticket.violationType}
+                    </p>
+                    <p class="text-sm text-gray-500 flex items-center">
+                        <i class="bi bi-calendar-event mr-2"></i>
+                        ${ticket.date}
+                    </p>
+                </div>
+                <button onclick="deleteTicket('${ticket.id}')" class="mt-6 w-full bg-red-50 text-red-600 py-2 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center">
+                    <i class="bi bi-trash mr-2"></i> Remove Ticket
+                </button>
+            `;
+            ticketContainer.appendChild(ticketEl);
+        }
+
+        function deleteTicket(id) {
+            if(confirm('Are you sure you want to delete this ticket?')) {
+                tickets = tickets.filter(ticket => ticket.id !== id);
+                localStorage.setItem('tickets', JSON.stringify(tickets));
+                renderTickets();
+            }
+        }
+
+        function renderTickets() {
+            ticketContainer.innerHTML = '';
+            if(tickets.length === 0) {
+                ticketContainer.innerHTML = `
+                    <div class="col-span-3 text-center py-16">
+                        <i class="bi bi-ticket-detailed text-6xl text-gray-300"></i>
+                        <p class="text-gray-500 mt-4">No tickets issued yet</p>
+                    </div>
+                `;
+                return;
+            }
+            tickets.forEach(ticket => createTicket(ticket));
+        }
+
+        newTicketBtn.addEventListener('click', showModal);
+        cancelBtn.addEventListener('click', hideModal);
+
+        ticketForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newTicket = {
+                id: Date.now().toString(),
+                vehicleNumber: document.getElementById('vehicleNumber').value.toUpperCase(),
+                vehicleType: document.getElementById('vehicleType').value,
+                violationType: document.getElementById('violationType').value,
+                fineAmount: document.getElementById('fineAmount').value,
+                date: new Date().toLocaleString()
+            };
+            tickets.unshift(newTicket); // Add new ticket to the beginning
+            localStorage.setItem('tickets', JSON.stringify(tickets));
+            renderTickets();
+            hideModal();
+        });
+
+        // Initial render
+        renderTickets();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
